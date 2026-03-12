@@ -1,0 +1,250 @@
+{
+  "name": "MyVisuals",
+  "project_type": "standard",
+  "created_at": 1773314195.749482,
+  "modified_at": 1773314201.017976,
+  "metadata": {
+    "fps": 60,
+    "resolution": [
+      1920,
+      1080
+    ],
+    "cook_rate": 60
+  },
+  "operators": {
+    "/project1/audioIn1": {
+      "name": "audioIn1",
+      "path": "/project1/audioIn1",
+      "family": "CHOP",
+      "type": "audiofileinCHOP",
+      "parent": "/project1",
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "file": ""
+      },
+      "flags": {
+        "bypass": false,
+        "lock": false,
+        "viewer": false,
+        "render": false,
+        "display": false
+      },
+      "created_at": 1773314201.0175529
+    },
+    "/project1/spectrum1": {
+      "name": "spectrum1",
+      "path": "/project1/spectrum1",
+      "family": "CHOP",
+      "type": "audiospectrumCHOP",
+      "parent": "/project1",
+      "position": [
+        200,
+        0
+      ],
+      "parameters": {},
+      "flags": {
+        "bypass": false,
+        "lock": false,
+        "viewer": false,
+        "render": false,
+        "display": false
+      },
+      "created_at": 1773314201.017567
+    },
+    "/project1/math1": {
+      "name": "math1",
+      "path": "/project1/math1",
+      "family": "CHOP",
+      "type": "mathCHOP",
+      "parent": "/project1",
+      "position": [
+        400,
+        0
+      ],
+      "parameters": {
+        "gain": 2.0
+      },
+      "flags": {
+        "bypass": false,
+        "lock": false,
+        "viewer": false,
+        "render": false,
+        "display": false
+      },
+      "created_at": 1773314201.017581
+    },
+    "/project1/null_chop1": {
+      "name": "null_chop1",
+      "path": "/project1/null_chop1",
+      "family": "CHOP",
+      "type": "nullCHOP",
+      "parent": "/project1",
+      "position": [
+        600,
+        0
+      ],
+      "parameters": {},
+      "flags": {
+        "bypass": false,
+        "lock": false,
+        "viewer": false,
+        "render": false,
+        "display": false
+      },
+      "created_at": 1773314201.017598
+    },
+    "/project1/chopTo1": {
+      "name": "chopTo1",
+      "path": "/project1/chopTo1",
+      "family": "TOP",
+      "type": "choptoTOP",
+      "parent": "/project1",
+      "position": [
+        0,
+        150
+      ],
+      "parameters": {},
+      "flags": {
+        "bypass": false,
+        "lock": false,
+        "viewer": false,
+        "render": true,
+        "display": false
+      },
+      "created_at": 1773314201.0176861
+    },
+    "/project1/noise1": {
+      "name": "noise1",
+      "path": "/project1/noise1",
+      "family": "TOP",
+      "type": "noiseTOP",
+      "parent": "/project1",
+      "position": [
+        200,
+        150
+      ],
+      "parameters": {
+        "amp": 1.0
+      },
+      "flags": {
+        "bypass": false,
+        "lock": false,
+        "viewer": false,
+        "render": true,
+        "display": false
+      },
+      "created_at": 1773314201.017712
+    },
+    "/project1/comp1": {
+      "name": "comp1",
+      "path": "/project1/comp1",
+      "family": "TOP",
+      "type": "compositeTOP",
+      "parent": "/project1",
+      "position": [
+        400,
+        150
+      ],
+      "parameters": {
+        "operand": "multiply"
+      },
+      "flags": {
+        "bypass": false,
+        "lock": false,
+        "viewer": false,
+        "render": true,
+        "display": false
+      },
+      "created_at": 1773314201.0177422
+    },
+    "/project1/level1": {
+      "name": "level1",
+      "path": "/project1/level1",
+      "family": "TOP",
+      "type": "levelTOP",
+      "parent": "/project1",
+      "position": [
+        600,
+        150
+      ],
+      "parameters": {
+        "brightness1": 1.5
+      },
+      "flags": {
+        "bypass": false,
+        "lock": false,
+        "viewer": false,
+        "render": true,
+        "display": false
+      },
+      "created_at": 1773314201.017775
+    },
+    "/project1/out1": {
+      "name": "out1",
+      "path": "/project1/out1",
+      "family": "TOP",
+      "type": "nullTOP",
+      "parent": "/project1",
+      "position": [
+        800,
+        150
+      ],
+      "parameters": {},
+      "flags": {
+        "bypass": false,
+        "lock": false,
+        "viewer": false,
+        "render": true,
+        "display": false
+      },
+      "created_at": 1773314201.017812
+    }
+  },
+  "connections": [
+    {
+      "from": "/project1/audioIn1",
+      "to": "/project1/spectrum1",
+      "from_index": 0,
+      "to_index": 0
+    },
+    {
+      "from": "/project1/spectrum1",
+      "to": "/project1/math1",
+      "from_index": 0,
+      "to_index": 0
+    },
+    {
+      "from": "/project1/math1",
+      "to": "/project1/null_chop1",
+      "from_index": 0,
+      "to_index": 0
+    },
+    {
+      "from": "/project1/chopTo1",
+      "to": "/project1/noise1",
+      "from_index": 0,
+      "to_index": 0
+    },
+    {
+      "from": "/project1/noise1",
+      "to": "/project1/comp1",
+      "from_index": 0,
+      "to_index": 0
+    },
+    {
+      "from": "/project1/comp1",
+      "to": "/project1/level1",
+      "from_index": 0,
+      "to_index": 0
+    },
+    {
+      "from": "/project1/level1",
+      "to": "/project1/out1",
+      "from_index": 0,
+      "to_index": 0
+    }
+  ]
+}

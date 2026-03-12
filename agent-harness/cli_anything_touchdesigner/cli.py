@@ -40,6 +40,12 @@ class CLIState:
                 sys.exit(1)
         return proj
 
+    def auto_save(self):
+        """Save the active project back to disk if --project was used."""
+        proj = self.manager.active_project
+        if proj and self.project_path and proj.is_dirty:
+            proj.save(self.project_path)
+
 
 pass_state = click.make_pass_decorator(CLIState, ensure=True)
 
@@ -68,6 +74,9 @@ def cli(ctx, json_mode, project_path):
             state.manager.open_project(project_path)
         except Exception as e:
             state.fmt.error(f"Failed to load project: {e}")
+
+    # Auto-save project after command completes
+    ctx.call_on_close(state.auto_save)
 
     # Enter REPL if no subcommand
     if ctx.invoked_subcommand is None:
