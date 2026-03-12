@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🎛️ cli-anything-touchdesigner
+# 🎛️ cli-touchdesigner
 
 ### Make TouchDesigner Agent-Native
 
