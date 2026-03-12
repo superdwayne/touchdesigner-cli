@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cli-anything-touchdesigner"
+version = "1.0.0"
+description = "TouchDesigner CLI for AI Agents"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+dependencies = ["click>=8.0"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "pytest-cov>=4.0"]
+
+[project.scripts]
+cli-anything-touchdesigner = "cli_anything_touchdesigner.cli:main"
+td-cli = "cli_anything_touchdesigner.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
