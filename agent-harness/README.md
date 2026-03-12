@@ -17,6 +17,8 @@ Part of the [CLI-Anything](https://github.com/HKUDS/CLI-Anything) ecosystem
 
 **103+ Operators** · **8 Network Templates** · **Interactive REPL** · **JSON Output** · **Script Export**
 
+[**Installation Guide**](docs/INSTALL.md) · [**Agent Integration Guide**](docs/AGENTS.md)
+
 </div>
 
 ---
@@ -26,6 +28,7 @@ Part of the [CLI-Anything](https://github.com/HKUDS/CLI-Anything) ecosystem
 - [Why This Exists](#-why-this-exists)
 - [Installation](#-installation)
 - [Quick Start](#-quick-start)
+- [Agent Integration](#-agent-integration)
 - [REPL Mode](#-repl-mode)
 - [Operator Families](#-operator-families)
 - [Network Templates](#-network-templates)
@@ -161,6 +164,47 @@ cli-anything-touchdesigner op suggest audio reactive visuals
 # │  TOP     choptoTOP          Convert audio data to texture│
 # └──────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## 🤖 Agent Integration
+
+This CLI is designed to be used by **AI agents**. Full guide: **[docs/AGENTS.md](docs/AGENTS.md)**
+
+### Works with every major agent platform
+
+| Platform | How It Works |
+|----------|-------------|
+| **Claude Code** | Discovers via `which` and `--help`. Add hints to `CLAUDE.md`. |
+| **Cursor** | Add to `.cursorrules` for automatic discovery. |
+| **Windsurf** | Add to `.windsurfrules` or global rules. |
+| **Copilot CLI** | Suggests commands from `??` queries. |
+| **LangChain** | Wrap as a `@tool` — [example in AGENTS.md](docs/AGENTS.md#-custom-agents-python). |
+| **CrewAI** | Wrap as a `@tool` — [example in AGENTS.md](docs/AGENTS.md#-custom-agents-python). |
+| **MCP Server** | Expose as MCP tools — [example in AGENTS.md](docs/AGENTS.md#-mcp-server-integration). |
+| **Any language** | Shell out + parse JSON — [Node/Go/Rust examples](docs/AGENTS.md#-custom-agents-any-language). |
+
+### Minimal agent prompt (copy-paste into your agent)
+
+```
+You have access to `cli-anything-touchdesigner`, a CLI for building TouchDesigner projects.
+
+Key commands:
+  cli-anything-touchdesigner --json project new <name> -o <file.json>
+  cli-anything-touchdesigner --json --project <file> op add <FAMILY> <type> <name>
+  cli-anything-touchdesigner --json --project <file> net template <template_name>
+  cli-anything-touchdesigner --json --project <file> net connect <from> <to>
+  cli-anything-touchdesigner --json --project <file> export script -o <output.py>
+  cli-anything-touchdesigner op suggest <description>
+
+Families: TOP, CHOP, SOP, DAT, COMP, MAT, POP
+Templates: audio-reactive, feedback-loop, 3d-scene, particle-system,
+           instancing, glsl-shader, osc-receiver, video-mixer
+
+Always use --json for structured output.
+```
+
+> **Full integration guide with code examples for every platform:** **[docs/AGENTS.md](docs/AGENTS.md)**
 
 ---
 
