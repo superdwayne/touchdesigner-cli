@@ -1,0 +1,150 @@
+{
+  "name": "LiveDashboard",
+  "project_type": "standard",
+  "created_at": 1773325076.8069398,
+  "modified_at": 1773325274.567898,
+  "metadata": {
+    "fps": 60,
+    "resolution": [
+      1920,
+      1080
+    ],
+    "cook_rate": 60
+  },
+  "operators": {
+    "/project1/movieIn1": {
+      "name": "movieIn1",
+      "path": "/project1/movieIn1",
+      "family": "TOP",
+      "type": "moviefileinTOP",
+      "parent": "/project1",
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "file": ""
+      },
+      "flags": {
+        "bypass": false,
+        "lock": false,
+        "viewer": false,
+        "render": true,
+        "display": false
+      },
+      "created_at": 1773325274.5677729
+    },
+    "/project1/movieIn2": {
+      "name": "movieIn2",
+      "path": "/project1/movieIn2",
+      "family": "TOP",
+      "type": "moviefileinTOP",
+      "parent": "/project1",
+      "position": [
+        200,
+        0
+      ],
+      "parameters": {
+        "file": ""
+      },
+      "flags": {
+        "bypass": false,
+        "lock": false,
+        "viewer": false,
+        "render": true,
+        "display": false
+      },
+      "created_at": 1773325274.5677838
+    },
+    "/project1/switch1": {
+      "name": "switch1",
+      "path": "/project1/switch1",
+      "family": "TOP",
+      "type": "switchTOP",
+      "parent": "/project1",
+      "position": [
+        0,
+        150
+      ],
+      "parameters": {
+        "index": 0
+      },
+      "flags": {
+        "bypass": false,
+        "lock": false,
+        "viewer": false,
+        "render": true,
+        "display": false
+      },
+      "created_at": 1773325274.567796
+    },
+    "/project1/comp1": {
+      "name": "comp1",
+      "path": "/project1/comp1",
+      "family": "TOP",
+      "type": "compositeTOP",
+      "parent": "/project1",
+      "position": [
+        200,
+        150
+      ],
+      "parameters": {
+        "operand": "over"
+      },
+      "flags": {
+        "bypass": false,
+        "lock": false,
+        "viewer": false,
+        "render": true,
+        "display": false
+      },
+      "created_at": 1773325274.56784
+    },
+    "/project1/out1": {
+      "name": "out1",
+      "path": "/project1/out1",
+      "family": "TOP",
+      "type": "nullTOP",
+      "parent": "/project1",
+      "position": [
+        400,
+        150
+      ],
+      "parameters": {},
+      "flags": {
+        "bypass": false,
+        "lock": false,
+        "viewer": false,
+        "render": true,
+        "display": false
+      },
+      "created_at": 1773325274.567876
+    }
+  },
+  "connections": [
+    {
+      "from": "/project1/movieIn1",
+      "to": "/project1/switch1",
+      "from_index": 0,
+      "to_index": 0
+    },
+    {
+      "from": "/project1/movieIn2",
+      "to": "/project1/switch1",
+      "from_index": 0,
+      "to_index": 1
+    },
+    {
+      "from": "/project1/switch1",
+      "to": "/project1/comp1",
+      "from_index": 0,
+      "to_index": 0
+    },
+    {
+      "from": "/project1/comp1",
+      "to": "/project1/out1",
+      "from_index": 0,
+      "to_index": 0
+    }
+  ]
+}

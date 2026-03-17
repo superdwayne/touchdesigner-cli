@@ -1,0 +1,16 @@
+{
+  "name": "AudioExperience",
+  "project_type": "standard",
+  "created_at": 1773331572.7563741,
+  "modified_at": 1773331572.7563741,
+  "metadata": {
+    "fps": 60,
+    "resolution": [
+      1920,
+      1080
+    ],
+    "cook_rate": 60
+  },
+  "operators": {},
+  "connections": []
+}

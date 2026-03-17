@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TouchDesigner CLI — Live Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #0a0a0f;
+            --surface: #13131a;
+            --surface2: #1a1a24;
+            --border: #2a2a3a;
+            --text: #e0e0e8;
+            --text-dim: #8888a0;
+            --accent: #a855f7;
+            --top: #a855f7;
+            --chop: #22c55e;
+            --sop: #3b82f6;
+            --dat: #06b6d4;
+            --comp: #94a3b8;
+            --mat: #eab308;
+            --pop: #ec4899;
+        }
+
+        body {
+            font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+            background: var(--bg);
+            color: var(--text);
+            height: 100dvh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* --- Sidebar --- */
+        .sidebar {
+            width: 320px;
+            min-width: 320px;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .sidebar-header h1 {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--accent);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .sidebar-header .subtitle {
+            font-size: 11px;
+            color: var(--text-dim);
+            margin-top: 4px;
+        }
+
+        .sidebar-section {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sidebar-section h2 {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text-dim);
+            margin-bottom: 12px;
+        }
+
+        .sidebar-scroll {
+            flex: 1;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border) transparent;
+        }
+
+        /* --- Template buttons --- */
+        .template-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .template-btn {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 10px 8px;
+            border-radius: 8px;
+            font-size: 10px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.15s;
+            text-align: center;
+            line-height: 1.3;
+        }
+
+        .template-btn:hover {
+            border-color: var(--accent);
+            background: rgba(168, 85, 247, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .template-btn:active {
+            transform: translateY(0);
+        }
+
+        .template-btn .icon {
+            font-size: 18px;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        /* --- Add operator form --- */
+        .add-form {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 6px;
+        }
+
+        .add-form select, .add-form input {
+            flex: 1;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 8px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-family: inherit;
+            outline: none;
+        }
+
+        .add-form select:focus, .add-form input:focus {
+            border-color: var(--accent);
+        }
+
+        .btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.15s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn:hover { opacity: 0.85; }
+
+        .btn-danger {
+            background: #ef4444;
+        }
+
+        .btn-secondary {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent);
+        }
+
+        /* --- Project info bar --- */
+        .info-bar {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .info-chip {
+            background: var(--surface2);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            border: 1px solid var(--border);
+        }
+
+        .info-chip strong {
+            color: var(--accent);
+        }
+
+        /* --- Action buttons --- */
+        .action-bar {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .action-bar .btn {
+            font-size: 10px;
+            padding: 6px 12px;
+        }
+
+        /* --- Canvas area --- */
+        .canvas-area {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background:
+                radial-gradient(circle at 50% 50%, rgba(168,85,247,0.03) 0%, transparent 70%),
+                var(--bg);
+        }
+
+        .canvas-area svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* --- Nodes on canvas --- */
+        .node {
+            cursor: grab;
+            user-select: none;
+        }
+
+        .node:active { cursor: grabbing; }
+
+        .node rect {
+            rx: 8;
+            ry: 8;
+            stroke-width: 1.5;
+            transition: filter 0.15s;
+        }
+
+        .node:hover rect {
+            filter: brightness(1.3) drop-shadow(0 0 8px currentColor);
+        }
+
+        .node text {
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            fill: white;
+            pointer-events: none;
+        }
+
+        .node .node-name {
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .node .node-type {
+            font-size: 9px;
+            opacity: 0.6;
+        }
+
+        .node .node-family {
+            font-size: 9px;
+            font-weight: 700;
+            opacity: 0.8;
+        }
+
+        .connection {
+            stroke-width: 2;
+            fill: none;
+            opacity: 0.5;
+        }
+
+        .connection:hover {
+            opacity: 1;
+            stroke-width: 3;
+        }
+
+        /* --- Toast notifications --- */
+        .toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 1000;
+        }
+
+        .toast {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 12px;
+            animation: slideIn 0.3s ease;
+            max-width: 350px;
+        }
+
+        .toast.success { border-left: 3px solid #22c55e; }
+        .toast.error { border-left: 3px solid #ef4444; }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(40px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        /* --- Empty state --- */
+        .empty-state {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: var(--text-dim);
+            pointer-events: none;
+        }
+
+        .empty-state .big-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+
+        .empty-state p {
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        /* --- Script modal --- */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+        }
+
+        .modal-overlay.open { display: flex; }
+
+        .modal {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            width: 700px;
+            max-height: 80vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 { font-size: 14px; }
+
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .modal-body pre {
+            background: var(--bg);
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 11px;
+            line-height: 1.6;
+            overflow-x: auto;
+            white-space: pre;
+            color: var(--chop);
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--text-dim);
+            font-size: 20px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div class="sidebar">
+    <div class="sidebar-header">
+        <h1>🎛️ TD-CLI Dashboard</h1>
+        <div class="subtitle">TouchDesigner — Live View</div>
+    </div>
+
+    <div class="sidebar-scroll">
+        <!-- Project Info -->
+        <div class="sidebar-section">
+            <h2>Project</h2>
+            <div class="info-bar" id="project-info">
+                <div class="info-chip"><strong>0</strong> operators</div>
+                <div class="info-chip"><strong>0</strong> connections</div>
+            </div>
+        </div>
+
+        <!-- Templates -->
+        <div class="sidebar-section">
+            <h2>Network Templates</h2>
+            <div class="template-grid">
+                <button class="template-btn" onclick="buildTemplate('audio-reactive')">
+                    <span class="icon">🎵</span>Audio Reactive
+                </button>
+                <button class="template-btn" onclick="buildTemplate('feedback-loop')">
+                    <span class="icon">🔄</span>Feedback Loop
+                </button>
+                <button class="template-btn" onclick="buildTemplate('3d-scene')">
+                    <span class="icon">🧊</span>3D Scene
+                </button>
+                <button class="template-btn" onclick="buildTemplate('particle-system')">
+                    <span class="icon">✨</span>Particles
+                </button>
+                <button class="template-btn" onclick="buildTemplate('instancing')">
+                    <span class="icon">📦</span>Instancing
+                </button>
+                <button class="template-btn" onclick="buildTemplate('glsl-shader')">
+                    <span class="icon">🎨</span>GLSL Shader
+                </button>
+                <button class="template-btn" onclick="buildTemplate('osc-receiver')">
+                    <span class="icon">📡</span>OSC Input
+                </button>
+                <button class="template-btn" onclick="buildTemplate('video-mixer')">
+                    <span class="icon">🎬</span>Video Mixer
+                </button>
+            </div>
+        </div>
+
+        <!-- Add Operator -->
+        <div class="sidebar-section">
+            <h2>Add Operator</h2>
+            <div class="add-form">
+                <div class="form-row">
+                    <select id="add-family" onchange="updateTypeOptions()">
+                        <option value="TOP">TOP</option>
+                        <option value="CHOP">CHOP</option>
+                        <option value="SOP">SOP</option>
+                        <option value="DAT">DAT</option>
+                        <option value="COMP">COMP</option>
+                        <option value="MAT">MAT</option>
+                        <option value="POP">POP</option>
+                    </select>
+                    <select id="add-type"></select>
+                </div>
+                <input type="text" id="add-name" placeholder="Operator name (e.g. noise1)">
+                <button class="btn" onclick="addOperator()">Add Operator</button>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="sidebar-section">
+            <h2>Actions</h2>
+            <div class="action-bar">
+                <button class="btn btn-secondary" onclick="doUndo()">↩ Undo</button>
+                <button class="btn btn-secondary" onclick="doRedo()">↪ Redo</button>
+                <button class="btn btn-secondary" onclick="showScript()">📜 Script</button>
+                <button class="btn btn-danger" onclick="clearProject()">🗑 Clear</button>
+            </div>
+        </div>
+
+        <!-- Operator list -->
+        <div class="sidebar-section">
+            <h2>Operators</h2>
+            <div id="op-list" style="font-size: 11px;"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Canvas -->
+<div class="canvas-area" id="canvas-area">
+    <svg id="network-svg"></svg>
+    <div class="empty-state" id="empty-state">
+        <div class="big-icon">🎛️</div>
+        <p>No operators yet.<br>Click a template or add an operator to begin.</p>
+    </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toasts"></div>
+
+<!-- Script modal -->
+<div class="modal-overlay" id="script-modal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>📜 TouchDesigner Python Script</h3>
+            <button class="close-btn" onclick="closeScript()">✕</button>
+        </div>
+        <div class="modal-body">
+            <pre id="script-content"></pre>
+        </div>
+    </div>
+</div>
+
+<script>
+const API = '';
+const FAMILY_COLORS = {
+    TOP: '#a855f7', CHOP: '#22c55e', SOP: '#3b82f6',
+    DAT: '#06b6d4', COMP: '#94a3b8', MAT: '#eab308', POP: '#ec4899'
+};
+
+let allTypes = {};
+let dragState = null;
+
+// --- API helpers ---
+async function api(path, opts = {}) {
+    const res = await fetch(API + path, {
+        headers: { 'Content-Type': 'application/json' },
+        ...opts,
+        body: opts.body ? JSON.stringify(opts.body) : undefined,
+    });
+    return res.json();
+}
+
+function toast(msg, type = 'success') {
+    const el = document.createElement('div');
+    el.className = `toast ${type}`;
+    el.textContent = msg;
+    document.getElementById('toasts').appendChild(el);
+    setTimeout(() => el.remove(), 3000);
+}
+
+// --- Load types ---
+async function loadTypes() {
+    allTypes = await api('/api/op/types');
+    updateTypeOptions();
+}
+
+function updateTypeOptions() {
+    const family = document.getElementById('add-family').value;
+    const sel = document.getElementById('add-type');
+    const types = allTypes[family] || [];
+    sel.innerHTML = types.map(t =>
+        `<option value="${t.type}">${t.label}</option>`
+    ).join('');
+}
+
+// --- Templates ---
+async function buildTemplate(name) {
+    const data = await api('/api/net/template', {
+        method: 'POST',
+        body: { template: name }
+    });
+    if (data.status === 'success') {
+        toast(`Built ${name} (${data.operators_created} ops)`);
+        refresh();
+    } else {
+        toast(data.message, 'error');
+    }
+}
+
+// --- Add operator ---
+async function addOperator() {
+    const family = document.getElementById('add-family').value;
+    const type = document.getElementById('add-type').value;
+    const name = document.getElementById('add-name').value.trim();
+    if (!name) { toast('Enter a name', 'error'); return; }
+
+    const data = await api('/api/op/add', {
+        method: 'POST',
+        body: { family, type, name }
+    });
+    if (data.status === 'success') {
+        toast(`Added ${family}: ${name}`);
+        document.getElementById('add-name').value = '';
+        refresh();
+    } else {
+        toast(data.message, 'error');
+    }
+}
+
+// --- Actions ---
+async function doUndo() {
+    const data = await api('/api/undo', { method: 'POST' });
+    toast(data.status === 'success' ? 'Undone' : 'Nothing to undo', data.status === 'success' ? 'success' : 'error');
+    refresh();
+}
+
+async function doRedo() {
+    const data = await api('/api/redo', { method: 'POST' });
+    toast(data.status === 'success' ? 'Redone' : 'Nothing to redo', data.status === 'success' ? 'success' : 'error');
+    refresh();
+}
+
+async function clearProject() {
+    await api('/api/project/clear', { method: 'POST' });
+    toast('Project cleared');
+    refresh();
+}
+
+async function showScript() {
+    const data = await api('/api/export/script');
+    document.getElementById('script-content').textContent = data.script;
+    document.getElementById('script-modal').classList.add('open');
+}
+
+function closeScript() {
+    document.getElementById('script-modal').classList.remove('open');
+}
+
+// --- Delete operator ---
+async function deleteOp(path) {
+    await api('/api/op/remove', { method: 'POST', body: { path } });
+    toast(`Removed ${path.split('/').pop()}`);
+    refresh();
+}
+
+// --- Render ---
+function refresh() {
+    loadProject();
+}
+
+async function loadProject() {
+    const proj = await api('/api/project');
+    renderInfo(proj);
+    renderOpList(proj);
+    renderNetwork(proj);
+}
+
+function renderInfo(proj) {
+    const ops = Object.keys(proj.operators || {}).length;
+    const conns = (proj.connections || []).length;
+    const families = {};
+    Object.values(proj.operators || {}).forEach(o => {
+        families[o.family] = (families[o.family] || 0) + 1;
+    });
+    const famStr = Object.entries(families).map(([k,v]) =>
+        `<div class="info-chip" style="border-color:${FAMILY_COLORS[k]}50"><strong style="color:${FAMILY_COLORS[k]}">${v}</strong> ${k}</div>`
+    ).join('');
+
+    document.getElementById('project-info').innerHTML =
+        `<div class="info-chip"><strong>${ops}</strong> operators</div>` +
+        `<div class="info-chip"><strong>${conns}</strong> connections</div>` +
+        famStr;
+}
+
+function renderOpList(proj) {
+    const ops = Object.values(proj.operators || {});
+    if (!ops.length) {
+        document.getElementById('op-list').innerHTML = '<div style="color:var(--text-dim)">No operators</div>';
+        return;
+    }
+    document.getElementById('op-list').innerHTML = ops.map(o => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border)">
+            <span>
+                <span style="color:${FAMILY_COLORS[o.family]};font-weight:700">${o.family}</span>
+                <span style="margin-left:6px">${o.name}</span>
+            </span>
+            <button onclick="deleteOp('${o.path}')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:12px" title="Delete">✕</button>
+        </div>
+    `).join('');
+}
+
+function renderNetwork(proj) {
+    const svg = document.getElementById('network-svg');
+    const ops = Object.values(proj.operators || {});
+    const conns = proj.connections || [];
+    const empty = document.getElementById('empty-state');
+
+    if (!ops.length) {
+        svg.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+    }
+    empty.style.display = 'none';
+
+    const W = 150, H = 56, PAD = 60;
+    // Layout: use position data, scale up
+    const positions = {};
+    ops.forEach(o => {
+        const px = (o.position?.[0] || 0);
+        const py = (o.position?.[1] || 0);
+        positions[o.path] = {
+            x: PAD + px * 1.1,
+            y: PAD + py * 1.1,
+        };
+    });
+
+    // Build SVG
+    let svgContent = '<defs>';
+    // Glow filters per family
+    Object.entries(FAMILY_COLORS).forEach(([fam, col]) => {
+        svgContent += `
+            <filter id="glow-${fam}" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="4" result="blur"/>
+                <feFlood flood-color="${col}" flood-opacity="0.3"/>
+                <feComposite in2="blur" operator="in"/>
+                <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>`;
+    });
+    svgContent += '</defs>';
+
+    // Draw connections
+    conns.forEach(c => {
+        const from = positions[c.from];
+        const to = positions[c.to];
+        if (!from || !to) return;
+        const x1 = from.x + W;
+        const y1 = from.y + H / 2;
+        const x2 = to.x;
+        const y2 = to.y + H / 2;
+        const cx = (x1 + x2) / 2;
+        const fromOp = proj.operators[c.from];
+        const col = FAMILY_COLORS[fromOp?.family] || '#666';
+        svgContent += `<path class="connection" d="M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}" stroke="${col}"/>`;
+    });
+
+    // Draw nodes
+    ops.forEach(o => {
+        const pos = positions[o.path];
+        const col = FAMILY_COLORS[o.family] || '#666';
+        svgContent += `
+            <g class="node" data-path="${o.path}" transform="translate(${pos.x}, ${pos.y})"
+               onmousedown="startDrag(event, '${o.path}')">
+                <rect width="${W}" height="${H}" fill="${col}20" stroke="${col}" filter="url(#glow-${o.family})"/>
+                <text class="node-family" x="10" y="16">${o.family}</text>
+                <text class="node-name" x="10" y="32">${o.name}</text>
+                <text class="node-type" x="10" y="46">${o.type.replace(o.family, '')}</text>
+            </g>`;
+    });
+
+    svg.innerHTML = svgContent;
+}
+
+// --- Drag nodes ---
+function startDrag(e, path) {
+    e.preventDefault();
+    const svg = document.getElementById('network-svg');
+    const node = svg.querySelector(`[data-path="${path}"]`);
+    if (!node) return;
+
+    const svgRect = svg.getBoundingClientRect();
+    const transform = node.getAttribute('transform');
+    const match = transform.match(/translate\(([\d.]+),\s*([\d.]+)\)/);
+    if (!match) return;
+
+    dragState = {
+        path,
+        node,
+        startX: e.clientX,
+        startY: e.clientY,
+        origX: parseFloat(match[1]),
+        origY: parseFloat(match[2]),
+    };
+
+    document.addEventListener('mousemove', onDrag);
+    document.addEventListener('mouseup', endDrag);
+}
+
+function onDrag(e) {
+    if (!dragState) return;
+    const dx = e.clientX - dragState.startX;
+    const dy = e.clientY - dragState.startY;
+    const nx = dragState.origX + dx;
+    const ny = dragState.origY + dy;
+    dragState.node.setAttribute('transform', `translate(${nx}, ${ny})`);
+}
+
+function endDrag() {
+    dragState = null;
+    document.removeEventListener('mousemove', onDrag);
+    document.removeEventListener('mouseup', endDrag);
+}
+
+// --- Init ---
+loadTypes();
+loadProject();
+// Auto-refresh every 2 seconds
+setInterval(loadProject, 2000);
+</script>
+
+</body>
+</html>

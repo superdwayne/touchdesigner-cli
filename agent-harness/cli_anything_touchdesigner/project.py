@@ -347,19 +347,19 @@ class TDProject:
             name = op["name"]
             op_type = op["type"]
             lines.append(f"# Create {op['family']}: {name}")
-            lines.append(f"_op = op('{parent}').create({op_type}, '{name}')")
+            lines.append(f"_op = op('{parent}').create('{op_type}', '{name}')")
 
             # Set position
             pos = op.get("position", [0, 0])
             lines.append(f"_op.nodeX = {pos[0]}")
             lines.append(f"_op.nodeY = {pos[1]}")
 
-            # Set parameters
+            # Set parameters (wrapped in try/except for resilience)
             for pname, pvalue in op.get("parameters", {}).items():
                 if isinstance(pvalue, str):
-                    lines.append(f"_op.par.{pname} = {pvalue!r}")
+                    lines.append(f"try:\n    _op.par.{pname} = {pvalue!r}\nexcept: pass")
                 else:
-                    lines.append(f"_op.par.{pname} = {pvalue}")
+                    lines.append(f"try:\n    _op.par.{pname} = {pvalue}\nexcept: pass")
 
             # Set flags
             flags = op.get("flags", {})

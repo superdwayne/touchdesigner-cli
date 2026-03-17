@@ -16,8 +16,26 @@ class NetworkBuilder:
         self.project = project
         self._next_x = 0
         self._next_y = 0
-        self._step_x = 200
+        self._step_x = 250
         self._step_y = 0
+        self._row_height = 200
+        self._template_gap = 350
+        self._row_start_y = 0
+
+        # Auto-detect starting Y from existing operators so new templates
+        # never overlap with what's already in the project.
+        self._auto_offset_from_existing()
+
+    def _auto_offset_from_existing(self):
+        """Set starting Y below all existing operators in the project."""
+        max_y = -self._template_gap
+        for op in self.project.operators.values():
+            pos = op.get("position", [0, 0])
+            if pos[1] > max_y:
+                max_y = pos[1]
+        if self.project.operators:
+            self._next_y = max_y + self._template_gap
+            self._row_start_y = self._next_y
 
     def _advance_position(self) -> List[int]:
         """Return the next position and advance the cursor."""
@@ -28,7 +46,18 @@ class NetworkBuilder:
     def _new_row(self):
         """Move to a new row in the network layout."""
         self._next_x = 0
-        self._next_y += 150
+        self._next_y += self._row_height
+
+    def _start_template(self):
+        """Called at the start of each template to position below previous content."""
+        max_y = self._row_start_y - self._template_gap
+        for op in self.project.operators.values():
+            pos = op.get("position", [0, 0])
+            if pos[1] > max_y:
+                max_y = pos[1]
+        self._next_x = 0
+        self._next_y = max_y + self._template_gap if self.project.operators else 0
+        self._row_start_y = self._next_y
 
     def add_chain(
         self,
@@ -84,24 +113,23 @@ class NetworkBuilder:
 
         Chain: Audio File In → Audio Spectrum → Math → CHOP to TOP → Noise TOP (composite)
         """
-        self._next_x = 0
-        self._next_y = 0
+        self._start_template()
 
         chop_ops: List[Tuple[str, str, str, Optional[dict]]] = [
-            ("audioIn1", "CHOP", "audiofileinCHOP", {"file": audio_file}),
-            ("spectrum1", "CHOP", "audiospectrumCHOP", {}),
-            ("math1", "CHOP", "mathCHOP", {"gain": 2.0}),
-            ("null_chop1", "CHOP", "nullCHOP", {}),
+            ("ar_audioIn", "CHOP", "audiofileinCHOP", {"file": audio_file}),
+            ("ar_spectrum", "CHOP", "audiospectrumCHOP", {}),
+            ("ar_math", "CHOP", "mathCHOP", {"gain": 2.0}),
+            ("ar_null_chop", "CHOP", "nullCHOP", {}),
         ]
         chop_chain = self.add_chain(chop_ops, parent)
 
         self._new_row()
         top_ops: List[Tuple[str, str, str, Optional[dict]]] = [
-            ("chopTo1", "TOP", "choptoTOP", {}),
-            ("noise1", "TOP", "noiseTOP", {"amp": 1.0}),
-            ("comp1", "TOP", "compositeTOP", {"operand": "multiply"}),
-            ("level1", "TOP", "levelTOP", {"brightness1": 1.5}),
-            ("out1", "TOP", "nullTOP", {}),
+            ("ar_chopTo", "TOP", "choptoTOP", {}),
+            ("ar_noise", "TOP", "noiseTOP", {"amp": 1.0}),
+            ("ar_comp", "TOP", "compositeTOP", {"operand": "multiply"}),
+            ("ar_level", "TOP", "levelTOP", {"brightness1": 1.5}),
+            ("ar_out", "TOP", "nullTOP", {}),
         ]
         top_chain = self.add_chain(top_ops, parent)
 
@@ -115,16 +143,15 @@ class NetworkBuilder:
 
         Chain: Noise → Composite ← Feedback ← Level ← (loops back to Composite)
         """
-        self._next_x = 0
-        self._next_y = 0
+        self._start_template()
 
         ops: List[Tuple[str, str, str, Optional[dict]]] = [
-            ("noise1", "TOP", "noiseTOP", {"type": "random", "amp": 0.05}),
-            ("comp1", "TOP", "compositeTOP", {"operand": "add"}),
-            ("transform1", "TOP", "transformTOP", {"sx": 0.99, "sy": 0.99, "rz": 0.5}),
-            ("level1", "TOP", "levelTOP", {"opacity": 0.98}),
-            ("feedback1", "TOP", "feedbackTOP", {}),
-            ("out1", "TOP", "nullTOP", {}),
+            ("fb_noise", "TOP", "noiseTOP", {"type": "random", "amp": 0.05}),
+            ("fb_comp", "TOP", "compositeTOP", {"operand": "add"}),
+            ("fb_transform", "TOP", "transformTOP", {"sx": 0.99, "sy": 0.99, "rz": 0.5}),
+            ("fb_level", "TOP", "levelTOP", {"opacity": 0.98}),
+            ("fb_feedback", "TOP", "feedbackTOP", {}),
+            ("fb_out", "TOP", "nullTOP", {}),
         ]
         chain = self.add_chain(ops, parent, auto_connect=False)
 
@@ -154,8 +181,7 @@ class NetworkBuilder:
 
         Components: Geometry + Camera + Light → Render TOP
         """
-        self._next_x = 0
-        self._next_y = 0
+        self._start_template()
         created = []
 
         geo_types = {
@@ -212,8 +238,7 @@ class NetworkBuilder:
         parent: str = "/project1",
     ) -> List[dict]:
         """Build a GPU-accelerated particle system using POPs."""
-        self._next_x = 0
-        self._next_y = 0
+        self._start_template()
 
         pop_ops: List[Tuple[str, str, str, Optional[dict]]] = [
             ("popGen1", "POP", "popGeneratePOP", {"birthrate": 500}),
@@ -231,8 +256,7 @@ class NetworkBuilder:
         parent: str = "/project1",
     ) -> List[dict]:
         """Build a GPU instancing setup."""
-        self._next_x = 0
-        self._next_y = 0
+        self._start_template()
         created = []
 
         # CHOP chain for instance transforms
@@ -266,8 +290,7 @@ class NetworkBuilder:
         parent: str = "/project1",
     ) -> List[dict]:
         """Build a GLSL shader chain: Noise → GLSL → Level → Null."""
-        self._next_x = 0
-        self._next_y = 0
+        self._start_template()
 
         default_shader = (
             "out vec4 fragColor;\n"
@@ -296,14 +319,134 @@ class NetworkBuilder:
 
         return chain
 
+    def build_disintegration(
+        self,
+        geometry: str = "sphere",
+        parent: str = "/project1",
+    ) -> List[dict]:
+        """Build a disintegration effect — geometry breaks apart with noise and feedback.
+
+        Chain: Geometry COMP (with noise SOP displacement) → Render TOP →
+               Edge detect → Composite with feedback loop → Level → Output
+        """
+        self._start_template()
+        created = []
+
+        geo_types = {
+            "sphere": "sphereSOP",
+            "box": "boxSOP",
+            "grid": "gridSOP",
+            "torus": "torusSOP",
+        }
+        sop_type = geo_types.get(geometry, "sphereSOP")
+
+        # Row 1: 3D scene components
+        geo = self.project.add_operator(
+            "dis_geo", "COMP", "geometryCOMP", parent, self._advance_position()
+        )
+        created.append(geo)
+
+        cam = self.project.add_operator(
+            "dis_cam", "COMP", "cameraCOMP", parent, self._advance_position()
+        )
+        created.append(cam)
+
+        light = self.project.add_operator(
+            "dis_light", "COMP", "lightCOMP", parent, self._advance_position()
+        )
+        created.append(light)
+
+        # Row 2: Render + edge + noise texture
+        self._new_row()
+        render = self.project.add_operator(
+            "dis_render", "TOP", "renderTOP", parent, self._advance_position()
+        )
+        created.append(render)
+
+        edge = self.project.add_operator(
+            "dis_edge", "TOP", "edgeTOP", parent, self._advance_position()
+        )
+        created.append(edge)
+        self.project.connect(render["path"], edge["path"])
+
+        noise_tex = self.project.add_operator(
+            "dis_noise_tex", "TOP", "noiseTOP", parent, self._advance_position()
+        )
+        created.append(noise_tex)
+
+        # Row 3: Compositing + feedback loop
+        self._new_row()
+        comp = self.project.add_operator(
+            "dis_comp", "TOP", "compositeTOP", parent, self._advance_position()
+        )
+        created.append(comp)
+        # edge + noise texture composited
+        self.project.connect(edge["path"], comp["path"], to_index=0)
+        self.project.connect(noise_tex["path"], comp["path"], to_index=1)
+
+        feedback = self.project.add_operator(
+            "dis_feedback", "TOP", "feedbackTOP", parent, self._advance_position()
+        )
+        created.append(feedback)
+
+        transform = self.project.add_operator(
+            "dis_transform", "TOP", "transformTOP", parent, self._advance_position()
+        )
+        created.append(transform)
+
+        # Row 4: Final mix + output
+        self._new_row()
+        mix = self.project.add_operator(
+            "dis_mix", "TOP", "compositeTOP", parent, self._advance_position()
+        )
+        created.append(mix)
+        # comp + feedback trail
+        self.project.connect(comp["path"], mix["path"], to_index=0)
+        self.project.connect(feedback["path"], mix["path"], to_index=1)
+
+        level = self.project.add_operator(
+            "dis_level", "TOP", "levelTOP", parent, self._advance_position()
+        )
+        created.append(level)
+        self.project.connect(mix["path"], level["path"])
+
+        # Feedback loop: level → transform → feedback
+        self.project.connect(level["path"], transform["path"])
+        self.project.connect(transform["path"], feedback["path"])
+
+        out = self.project.add_operator(
+            "dis_out", "TOP", "nullTOP", parent, self._advance_position()
+        )
+        created.append(out)
+        self.project.connect(level["path"], out["path"])
+
+        # SOP inside geometry COMP: base shape + noise displacement
+        sop = self.project.add_operator(
+            f"dis_{geometry}", "SOP", sop_type, geo["path"], [0, 0]
+        )
+        created.append(sop)
+
+        noise_sop = self.project.add_operator(
+            "dis_noise_sop", "SOP", "noiseSOP", geo["path"], [250, 0]
+        )
+        created.append(noise_sop)
+        self.project.connect(sop["path"], noise_sop["path"])
+
+        null_sop = self.project.add_operator(
+            "dis_null_sop", "SOP", "nullSOP", geo["path"], [500, 0]
+        )
+        created.append(null_sop)
+        self.project.connect(noise_sop["path"], null_sop["path"])
+
+        return created
+
     def build_osc_receiver(
         self,
         port: int = 7000,
         parent: str = "/project1",
     ) -> List[dict]:
         """Build an OSC input chain for external control."""
-        self._next_x = 0
-        self._next_y = 0
+        self._start_template()
 
         ops: List[Tuple[str, str, str, Optional[dict]]] = [
             ("oscIn1", "CHOP", "oscinCHOP", {"port": port}),
@@ -319,8 +462,7 @@ class NetworkBuilder:
         parent: str = "/project1",
     ) -> List[dict]:
         """Build a multi-input video mixer."""
-        self._next_x = 0
-        self._next_y = 0
+        self._start_template()
         created = []
 
         inputs = []
@@ -369,4 +511,5 @@ TEMPLATES = {
     "glsl-shader": "Custom GLSL shader chain with input",
     "osc-receiver": "OSC input chain for external control",
     "video-mixer": "Multi-input video mixer with switch and composite",
+    "disintegration": "Geometry disintegration with noise displacement, edge detection, and feedback trails",
 }

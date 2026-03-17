@@ -18,6 +18,7 @@ from . import __version__
 from .project import ProjectManager, TDProject
 from .operators import find_type, get_families, get_types, suggest_operators
 from .network import NetworkBuilder, TEMPLATES
+from .connection import TDConnection, DEFAULT_PORT
 from .formatter import Formatter
 
 
@@ -56,6 +57,13 @@ Commands:
   render <output> [options]      Render current project
   export script <output>         Export as TD Python script
   export json <output>           Export project as JSON
+
+  live bootstrap [--port N]       Print TD receiver script (one-time setup)
+  live ping                      Check if TD receiver is reachable
+  live push                      Push current project to TD in real time
+  live render [output] [options] Render a frame from running TD instance
+  live send <script.py>          Send a script file to TD
+  live status                    Show live connection status
 
   undo                           Undo last change
   redo                           Redo last undone change
@@ -440,6 +448,7 @@ class TouchDesignerREPL(cmd.Cmd):
                 "glsl-shader": builder.build_glsl_shader,
                 "osc-receiver": builder.build_osc_receiver,
                 "video-mixer": builder.build_video_mixer,
+                "disintegration": builder.build_disintegration,
             }
 
             func = template_map.get(template_name)
@@ -476,6 +485,22 @@ class TouchDesignerREPL(cmd.Cmd):
 
         backend = get_backend()
         if not backend.is_available():
+            # Try live connection before falling back to script output
+            conn = TDConnection()
+            if conn.ping():
+                import os
+                self.fmt.info("TD batch not available — using live connection for render...")
+                output = parts[0] if parts else "output.png"
+                output_abs = os.path.abspath(output)
+                script = TDConnection.generate_render_script(
+                    output_path=output_abs, top_path="/project1/out1",
+                )
+                result = conn.send_script(script, timeout=30)
+                if result["success"]:
+                    self.fmt.success(f"Rendered: {output_abs}", result)
+                else:
+                    self.fmt.error(f"Render failed: {result['message']}")
+                return
             self.fmt.warning(
                 "TouchDesigner not found. Generating render script instead."
             )
@@ -531,6 +556,165 @@ class TouchDesignerREPL(cmd.Cmd):
         else:
             self.fmt.error(f"Unknown export format: {subcmd}")
 
+    def do_live(self, arg):
+        """Real-time connection to a running TouchDesigner instance."""
+        parts = shlex.split(arg) if arg else []
+        if not parts:
+            self.fmt.error(
+                "Usage: live <bootstrap|ping|push|render|send|status> [args]"
+            )
+            return
+
+        subcmd = parts[0]
+        # Parse --host / --port from trailing args
+        host, port = "127.0.0.1", DEFAULT_PORT
+        i = 1
+        while i < len(parts):
+            if parts[i] == "--host" and i + 1 < len(parts):
+                host = parts[i + 1]
+                i += 2
+            elif parts[i] == "--port" and i + 1 < len(parts):
+                port = int(parts[i + 1])
+                i += 2
+            else:
+                i += 1
+
+        conn = TDConnection(host=host, port=port)
+
+        if subcmd == "bootstrap":
+            output = None
+            copy_clip = False
+            j = 1
+            while j < len(parts):
+                if parts[j] == "--copy":
+                    copy_clip = True
+                    j += 1
+                elif parts[j] == "-o" and j + 1 < len(parts):
+                    output = parts[j + 1]
+                    j += 2
+                else:
+                    j += 1
+            script = TDConnection.get_bootstrap_script(port)
+            if output:
+                with open(output, "w") as f:
+                    f.write(script)
+                self.fmt.success(f"Bootstrap script written to {output}")
+            elif copy_clip:
+                try:
+                    import subprocess
+                    proc = subprocess.Popen(["pbcopy"], stdin=subprocess.PIPE)
+                    proc.communicate(script.encode())
+                    self.fmt.success(
+                        "Bootstrap script copied to clipboard. "
+                        "Paste it into TD's textport."
+                    )
+                except FileNotFoundError:
+                    click.echo(script)
+                    self.fmt.warning(
+                        "pbcopy not found — script printed above."
+                    )
+            else:
+                click.echo(script)
+                self.fmt.info(
+                    f"Paste the script above into TD's textport "
+                    f"to start the receiver on port {port}."
+                )
+
+        elif subcmd == "ping":
+            if conn.ping():
+                self.fmt.success(
+                    f"TD receiver is live at {conn.host}:{conn.port}"
+                )
+            else:
+                self.fmt.error(
+                    f"Cannot reach TD at {conn.host}:{conn.port}. "
+                    "Run 'live bootstrap' first."
+                )
+
+        elif subcmd == "push":
+            proj = self.manager.active_project
+            if not proj:
+                self.fmt.error("No active project.")
+                return
+            self.fmt.info(
+                f"Pushing '{proj.name}' to TD at {conn.host}:{conn.port}..."
+            )
+            result = conn.push_project(proj)
+            if result["success"]:
+                self.fmt.success("Project pushed to TouchDesigner")
+            else:
+                self.fmt.error(f"Push failed: {result['message']}")
+
+        elif subcmd == "send":
+            if len(parts) < 2:
+                self.fmt.error("Usage: live send <script_file>")
+                return
+            script_file = parts[1]
+            try:
+                with open(script_file) as f:
+                    script = f.read()
+            except FileNotFoundError:
+                self.fmt.error(f"File not found: {script_file}")
+                return
+            self.fmt.info(
+                f"Sending {script_file} to TD at {conn.host}:{conn.port}..."
+            )
+            result = conn.send_script(script)
+            if result["success"]:
+                self.fmt.success("Script executed in TouchDesigner")
+            else:
+                self.fmt.error(f"Send failed: {result['message']}")
+
+        elif subcmd == "render":
+            import os
+            output = "output.png"
+            top_path = "/project1/out1"
+            width, height = 1920, 1080
+            timeout = 30.0
+            j = 1
+            while j < len(parts):
+                if parts[j] == "--top" and j + 1 < len(parts):
+                    top_path = parts[j + 1]
+                    j += 2
+                elif parts[j] == "--width" and j + 1 < len(parts):
+                    width = int(parts[j + 1])
+                    j += 2
+                elif parts[j] == "--height" and j + 1 < len(parts):
+                    height = int(parts[j + 1])
+                    j += 2
+                elif parts[j] == "--timeout" and j + 1 < len(parts):
+                    timeout = float(parts[j + 1])
+                    j += 2
+                elif not parts[j].startswith("--") and parts[j] not in (host, str(port)):
+                    output = parts[j]
+                    j += 1
+                else:
+                    j += 1
+            output_abs = os.path.abspath(output)
+            script = TDConnection.generate_render_script(
+                output_path=output_abs, top_path=top_path,
+                width=width, height=height,
+            )
+            self.fmt.info(
+                f"Sending render command to TD at {conn.host}:{conn.port}..."
+            )
+            result = conn.send_script(script, timeout=timeout)
+            if result["success"]:
+                self.fmt.success(f"Rendered: {output_abs}", result)
+            else:
+                self.fmt.error(f"Render failed: {result['message']}")
+
+        elif subcmd == "status":
+            reachable = conn.ping()
+            if reachable:
+                label = click.style("CONNECTED", fg="green")
+            else:
+                label = click.style("OFFLINE", fg="red")
+            click.echo(f"  TD Receiver: {label} ({conn.host}:{conn.port})")
+
+        else:
+            self.fmt.error(f"Unknown live command: {subcmd}")
+
     def do_undo(self, arg):
         """Undo the last change."""
         proj = self.manager.active_project
@@ -553,11 +737,15 @@ class TouchDesignerREPL(cmd.Cmd):
 
         backend = get_backend()
         available = backend.is_available()
+        conn = TDConnection()
+        live_ok = conn.ping()
         self.fmt.data({
             "touchdesigner_available": available,
             "td_path": backend.td_path,
             "batch_path": backend.batch_path,
             "version": backend.get_version() if available else None,
+            "live_connection": live_ok,
+            "live_endpoint": f"{conn.host}:{conn.port}",
             "active_project": self.manager._active,
             "open_projects": self.manager.list_projects(),
         })

@@ -117,6 +117,30 @@ class TestNetworkBuilder:
         created = self.builder.build_video_mixer(input_count=2)
         assert len(self.proj.connections) >= 3
 
+    def test_build_disintegration(self):
+        created = self.builder.build_disintegration()
+        families = {op["family"] for op in created}
+        assert "SOP" in families
+        assert "COMP" in families
+        assert "TOP" in families
+        # Should have feedback loop connections
+        assert len(self.proj.connections) >= 8
+
+    def test_build_disintegration_geometries(self):
+        for geo in ["box", "sphere", "grid", "torus"]:
+            proj = TDProject(name="test")
+            builder = NetworkBuilder(proj)
+            created = builder.build_disintegration(geometry=geo)
+            sops = [op for op in created if op["family"] == "SOP"]
+            assert len(sops) >= 3  # source + noise + null
+
+    def test_build_disintegration_has_feedback(self):
+        created = self.builder.build_disintegration()
+        types = {op["type"] for op in created}
+        assert "feedbackTOP" in types
+        assert "edgeTOP" in types
+        assert "renderTOP" in types
+
     def test_custom_parent(self):
         self.proj.add_operator("base1", "COMP", "baseCOMP")
         created = self.builder.build_feedback_loop(parent="/project1/base1")
@@ -136,6 +160,7 @@ class TestTemplates:
         assert "glsl-shader" in TEMPLATES
         assert "osc-receiver" in TEMPLATES
         assert "video-mixer" in TEMPLATES
+        assert "disintegration" in TEMPLATES
 
     def test_templates_have_descriptions(self):
         for name, desc in TEMPLATES.items():

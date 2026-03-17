@@ -1,0 +1,417 @@
+{
+  "name": "AudioReactiveArt",
+  "project_type": "standard",
+  "created_at": 1773588736.463302,
+  "modified_at": 1773588736.4643068,
+  "metadata": {
+    "fps": 60,
+    "resolution": [
+      1920,
+      1080
+    ],
+    "cook_rate": 60
+  },
+  "operators": {
+    "/project1/ar_audioIn": {
+      "name": "ar_audioIn",
+      "path": "/project1/ar_audioIn",
+      "family": "CHOP",
+      "type": "audiofileinCHOP",
+      "parent": "/project1",
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "file": ""
+      },
+      "flags": {
+        "bypass": false,
+        "lock": false,
+        "viewer": false,
+        "render": false,
+        "display": false
+      },
+      "created_at": 1773588736.463325
+    },
+    "/project1/ar_spectrum": {
+      "name": "ar_spectrum",
+      "path": "/project1/ar_spectrum",
+      "family": "CHOP",
+      "type": "audiospectrumCHOP",
+      "parent": "/project1",
+      "position": [
+        250,
+        0
+      ],
+      "parameters": {},
+      "flags": {
+        "bypass": false,
+        "lock": false,
+        "viewer": false,
+        "render": false,
+        "display": false
+      },
+      "created_at": 1773588736.463338
+    },
+    "/project1/ar_math": {
+      "name": "ar_math",
+      "path": "/project1/ar_math",
+      "family": "CHOP",
+      "type": "mathCHOP",
+      "parent": "/project1",
+      "position": [
+        500,
+        0
+      ],
+      "parameters": {
+        "gain": 2.0
+      },
+      "flags": {
+        "bypass": false,
+        "lock": false,
+        "viewer": false,
+        "render": false,
+        "display": false
+      },
+      "created_at": 1773588736.46335
+    },
+    "/project1/ar_null_chop": {
+      "name": "ar_null_chop",
+      "path": "/project1/ar_null_chop",
+      "family": "CHOP",
+      "type": "nullCHOP",
+      "parent": "/project1",
+      "position": [
+        750,
+        0
+      ],
+      "parameters": {},
+      "flags": {
+        "bypass": false,
+        "lock": false,
+        "viewer": false,
+        "render": false,
+        "display": false
+      },
+      "created_at": 1773588736.4633658
+    },
+    "/project1/ar_chopTo": {
+      "name": "ar_chopTo",
+      "path": "/project1/ar_chopTo",
+      "family": "TOP",
+      "type": "choptoTOP",
+      "parent": "/project1",
+      "position": [
+        0,
+        200
+      ],
+      "parameters": {},
+      "flags": {
+        "bypass": false,
+        "lock": false,
+        "viewer": false,
+        "render": true,
+        "display": false
+      },
+      "created_at": 1773588736.463445
+    },
+    "/project1/ar_noise": {
+      "name": "ar_noise",
+      "path": "/project1/ar_noise",
+      "family": "TOP",
+      "type": "noiseTOP",
+      "parent": "/project1",
+      "position": [
+        250,
+        200
+      ],
+      "parameters": {
+        "amp": 1.0
+      },
+      "flags": {
+        "bypass": false,
+        "lock": false,
+        "viewer": false,
+        "render": true,
+        "display": false
+      },
+      "created_at": 1773588736.463468
+    },
+    "/project1/ar_comp": {
+      "name": "ar_comp",
+      "path": "/project1/ar_comp",
+      "family": "TOP",
+      "type": "compositeTOP",
+      "parent": "/project1",
+      "position": [
+        500,
+        200
+      ],
+      "parameters": {
+        "operand": "multiply"
+      },
+      "flags": {
+        "bypass": false,
+        "lock": false,
+        "viewer": false,
+        "render": true,
+        "display": false
+      },
+      "created_at": 1773588736.4634922
+    },
+    "/project1/ar_level": {
+      "name": "ar_level",
+      "path": "/project1/ar_level",
+      "family": "TOP",
+      "type": "levelTOP",
+      "parent": "/project1",
+      "position": [
+        750,
+        200
+      ],
+      "parameters": {
+        "brightness1": 1.5
+      },
+      "flags": {
+        "bypass": false,
+        "lock": false,
+        "viewer": false,
+        "render": true,
+        "display": false
+      },
+      "created_at": 1773588736.4635189
+    },
+    "/project1/ar_out": {
+      "name": "ar_out",
+      "path": "/project1/ar_out",
+      "family": "TOP",
+      "type": "nullTOP",
+      "parent": "/project1",
+      "position": [
+        1000,
+        200
+      ],
+      "parameters": {},
+      "flags": {
+        "bypass": false,
+        "lock": false,
+        "viewer": false,
+        "render": true,
+        "display": false
+      },
+      "created_at": 1773588736.463549
+    },
+    "/project1/fb_noise": {
+      "name": "fb_noise",
+      "path": "/project1/fb_noise",
+      "family": "TOP",
+      "type": "noiseTOP",
+      "parent": "/project1",
+      "position": [
+        0,
+        550
+      ],
+      "parameters": {
+        "type": "random",
+        "amp": 0.05
+      },
+      "flags": {
+        "bypass": false,
+        "lock": false,
+        "viewer": false,
+        "render": true,
+        "display": false
+      },
+      "created_at": 1773588736.463732
+    },
+    "/project1/fb_comp": {
+      "name": "fb_comp",
+      "path": "/project1/fb_comp",
+      "family": "TOP",
+      "type": "compositeTOP",
+      "parent": "/project1",
+      "position": [
+        250,
+        550
+      ],
+      "parameters": {
+        "operand": "add"
+      },
+      "flags": {
+        "bypass": false,
+        "lock": false,
+        "viewer": false,
+        "render": true,
+        "display": false
+      },
+      "created_at": 1773588736.4637718
+    },
+    "/project1/fb_transform": {
+      "name": "fb_transform",
+      "path": "/project1/fb_transform",
+      "family": "TOP",
+      "type": "transformTOP",
+      "parent": "/project1",
+      "position": [
+        500,
+        550
+      ],
+      "parameters": {
+        "sx": 0.99,
+        "sy": 0.99,
+        "rz": 0.5
+      },
+      "flags": {
+        "bypass": false,
+        "lock": false,
+        "viewer": false,
+        "render": true,
+        "display": false
+      },
+      "created_at": 1773588736.463815
+    },
+    "/project1/fb_level": {
+      "name": "fb_level",
+      "path": "/project1/fb_level",
+      "family": "TOP",
+      "type": "levelTOP",
+      "parent": "/project1",
+      "position": [
+        750,
+        550
+      ],
+      "parameters": {
+        "opacity": 0.98
+      },
+      "flags": {
+        "bypass": false,
+        "lock": false,
+        "viewer": false,
+        "render": true,
+        "display": false
+      },
+      "created_at": 1773588736.463865
+    },
+    "/project1/fb_feedback": {
+      "name": "fb_feedback",
+      "path": "/project1/fb_feedback",
+      "family": "TOP",
+      "type": "feedbackTOP",
+      "parent": "/project1",
+      "position": [
+        1000,
+        550
+      ],
+      "parameters": {},
+      "flags": {
+        "bypass": false,
+        "lock": false,
+        "viewer": false,
+        "render": true,
+        "display": false
+      },
+      "created_at": 1773588736.463914
+    },
+    "/project1/fb_out": {
+      "name": "fb_out",
+      "path": "/project1/fb_out",
+      "family": "TOP",
+      "type": "nullTOP",
+      "parent": "/project1",
+      "position": [
+        1250,
+        550
+      ],
+      "parameters": {},
+      "flags": {
+        "bypass": false,
+        "lock": false,
+        "viewer": false,
+        "render": true,
+        "display": false
+      },
+      "created_at": 1773588736.463966
+    }
+  },
+  "connections": [
+    {
+      "from": "/project1/ar_audioIn",
+      "to": "/project1/ar_spectrum",
+      "from_index": 0,
+      "to_index": 0
+    },
+    {
+      "from": "/project1/ar_spectrum",
+      "to": "/project1/ar_math",
+      "from_index": 0,
+      "to_index": 0
+    },
+    {
+      "from": "/project1/ar_math",
+      "to": "/project1/ar_null_chop",
+      "from_index": 0,
+      "to_index": 0
+    },
+    {
+      "from": "/project1/ar_chopTo",
+      "to": "/project1/ar_noise",
+      "from_index": 0,
+      "to_index": 0
+    },
+    {
+      "from": "/project1/ar_noise",
+      "to": "/project1/ar_comp",
+      "from_index": 0,
+      "to_index": 0
+    },
+    {
+      "from": "/project1/ar_comp",
+      "to": "/project1/ar_level",
+      "from_index": 0,
+      "to_index": 0
+    },
+    {
+      "from": "/project1/ar_level",
+      "to": "/project1/ar_out",
+      "from_index": 0,
+      "to_index": 0
+    },
+    {
+      "from": "/project1/fb_noise",
+      "to": "/project1/fb_comp",
+      "from_index": 0,
+      "to_index": 0
+    },
+    {
+      "from": "/project1/fb_feedback",
+      "to": "/project1/fb_comp",
+      "from_index": 0,
+      "to_index": 1
+    },
+    {
+      "from": "/project1/fb_comp",
+      "to": "/project1/fb_transform",
+      "from_index": 0,
+      "to_index": 0
+    },
+    {
+      "from": "/project1/fb_transform",
+      "to": "/project1/fb_level",
+      "from_index": 0,
+      "to_index": 0
+    },
+    {
+      "from": "/project1/fb_level",
+      "to": "/project1/fb_feedback",
+      "from_index": 0,
+      "to_index": 0
+    },
+    {
+      "from": "/project1/fb_comp",
+      "to": "/project1/fb_out",
+      "from_index": 0,
+      "to_index": 0
+    }
+  ]
+}

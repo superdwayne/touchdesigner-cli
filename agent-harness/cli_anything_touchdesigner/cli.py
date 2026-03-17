@@ -14,6 +14,7 @@ import click
 
 from . import __version__
 from .backend import get_backend
+from .connection import TDConnection, DEFAULT_HOST, DEFAULT_PORT
 from .formatter import Formatter
 from .network import NetworkBuilder, TEMPLATES
 from .operators import find_type, get_families, get_types, suggest_operators
@@ -434,6 +435,9 @@ def net_template(state, template_name, audio_file, geometry, count,
         "video-mixer": lambda: builder.build_video_mixer(
             input_count=input_count, parent=parent
         ),
+        "disintegration": lambda: builder.build_disintegration(
+            geometry=geometry, parent=parent
+        ),
     }
 
     func = template_map.get(template_name)
@@ -480,6 +484,21 @@ def render(state, output, top, width, height, frames):
     backend = get_backend()
 
     if not backend.is_available():
+        # Try live connection before falling back to script output
+        conn = TDConnection()
+        if conn.ping():
+            state.fmt.info("TD batch not available — using live connection for render...")
+            output_abs = os.path.abspath(output)
+            script = TDConnection.generate_render_script(
+                output_path=output_abs, top_path=top, width=width, height=height,
+            )
+            result = conn.send_script(script, timeout=30)
+            if result["success"]:
+                state.fmt.success(f"Rendered: {output_abs}", result)
+            else:
+                state.fmt.error(f"Render failed: {result['message']}")
+                sys.exit(1)
+            return
         state.fmt.warning(
             "TouchDesigner not found. Generating render script instead."
         )
@@ -544,6 +563,209 @@ def export_json(state, output):
 
 
 # ---------------------------------------------------------------------------
+# live commands  (real-time connection to running TD)
+# ---------------------------------------------------------------------------
+
+@cli.group()
+@click.option("--host", default=DEFAULT_HOST, help="TD receiver host.")
+@click.option("--port", type=int, default=DEFAULT_PORT, help="TD receiver port.")
+@click.pass_context
+def live(ctx, host, port):
+    """Real-time connection to a running TouchDesigner instance."""
+    ctx.ensure_object(CLIState)
+    ctx.obj._td_conn = TDConnection(host=host, port=port)
+
+
+def _get_conn(state) -> TDConnection:
+    """Retrieve the TDConnection from CLI state."""
+    return getattr(state, "_td_conn", TDConnection())
+
+
+@live.command("bootstrap")
+@click.option("--port", type=int, default=DEFAULT_PORT, help="Port for TD listener.")
+@click.option("--copy", "copy_clip", is_flag=True, help="Copy script to clipboard.")
+@click.option("-o", "--output", type=click.Path(), help="Write script to file.")
+@pass_state
+def live_bootstrap(state, port, copy_clip, output):
+    """Print the one-time receiver script to paste into TouchDesigner.
+
+    Run this once inside TD's textport (or a Text DAT) to start the
+    TCP listener.  After that, the CLI can push code in real time.
+    """
+    script = TDConnection.get_bootstrap_script(port)
+
+    if output:
+        with open(output, "w") as f:
+            f.write(script)
+        state.fmt.success(f"Bootstrap script written to {output}")
+    elif copy_clip:
+        try:
+            import subprocess
+            proc = subprocess.Popen(["pbcopy"], stdin=subprocess.PIPE)
+            proc.communicate(script.encode())
+            state.fmt.success("Bootstrap script copied to clipboard. Paste it into TD's textport.")
+        except FileNotFoundError:
+            click.echo(script)
+            state.fmt.warning("pbcopy not found — script printed above. Copy it manually.")
+    else:
+        click.echo(script)
+        state.fmt.info(
+            f"Paste the script above into TD's textport to start the receiver on port {port}."
+        )
+
+
+@live.command("ping")
+@pass_state
+def live_ping(state):
+    """Check if the TouchDesigner receiver is reachable."""
+    conn = _get_conn(state)
+    if conn.ping():
+        state.fmt.success(f"TD receiver is live at {conn.host}:{conn.port}")
+    else:
+        state.fmt.error(
+            f"Cannot reach TD receiver at {conn.host}:{conn.port}. "
+            "Run 'live bootstrap' and paste the script into TD first."
+        )
+        sys.exit(1)
+
+
+@live.command("push")
+@click.option("--timeout", type=float, default=10, help="Send timeout in seconds.")
+@click.option("--clean", is_flag=True, help="Clear existing nodes before pushing.")
+@pass_state
+def live_push(state, timeout, clean):
+    """Push the current project to TouchDesigner in real time."""
+    import time as _time
+    proj = state.require_project()
+    conn = _get_conn(state)
+
+    # Clear error log before push so we only see new errors
+    TDConnection.clear_errors()
+
+    if clean:
+        state.fmt.info("Clearing existing nodes in /project1...")
+        conn.send_script(
+            "for c in op('/project1').children:\n    c.destroy()\n"
+            "print('[td-cli] Cleared /project1')",
+            timeout=timeout,
+        )
+        _time.sleep(0.2)
+
+    state.fmt.info(f"Pushing project '{proj.name}' to TD at {conn.host}:{conn.port}...")
+    push_time = _time.time()
+    result = conn.push_project(proj, timeout=timeout)
+    if not result["success"]:
+        state.fmt.error(f"Push failed: {result['message']}")
+        sys.exit(1)
+
+    state.fmt.success("Project pushed to TouchDesigner", result)
+
+    # Wait for TD to execute and check for errors
+    _time.sleep(0.5)
+    errors = TDConnection.read_errors(since=push_time)
+    if errors:
+        state.fmt.warning(f"TD reported {len(errors)} error(s) during execution:")
+        for err in errors:
+            click.echo(click.style("  " + err.replace("\n", "\n  "), fg="red"))
+    else:
+        state.fmt.info("No errors from TD.")
+
+
+@live.command("query")
+@click.argument("op_type")
+@pass_state
+def live_query(state, op_type):
+    """Query a running TD for valid parameters on an operator type.
+
+    Example: td-cli live query noiseTOP
+    """
+    conn = _get_conn(state)
+    state.fmt.info(f"Querying TD for params on '{op_type}'...")
+    result = conn.query_params(op_type)
+    if result["success"]:
+        state.fmt.success(f"Parameters for {op_type}", result)
+    else:
+        state.fmt.error(f"Query failed: {result['message']}")
+
+
+@live.command("errors")
+@click.option("--clear", is_flag=True, help="Clear the error log after reading.")
+@pass_state
+def live_errors(state, clear):
+    """Read TD execution errors from the shared error log."""
+    errors = TDConnection.read_errors(clear=clear)
+    if errors:
+        state.fmt.warning(f"{len(errors)} error(s) from TouchDesigner:")
+        for i, err in enumerate(errors, 1):
+            click.echo(click.style(f"  [{i}] ", fg="yellow") + err.replace("\n", "\n      "))
+        if clear:
+            state.fmt.info("Error log cleared.")
+    else:
+        state.fmt.success("No errors in log.")
+        if clear:
+            state.fmt.info("Error log cleared.")
+
+
+@live.command("send")
+@click.argument("script_file", type=click.Path(exists=True))
+@click.option("--timeout", type=float, default=10, help="Send timeout in seconds.")
+@pass_state
+def live_send(state, script_file, timeout):
+    """Send an arbitrary Python script file to TouchDesigner."""
+    conn = _get_conn(state)
+    with open(script_file) as f:
+        script = f.read()
+    state.fmt.info(f"Sending {script_file} to TD at {conn.host}:{conn.port}...")
+    result = conn.send_script(script, timeout=timeout)
+    if result["success"]:
+        state.fmt.success("Script executed in TouchDesigner", result)
+    else:
+        state.fmt.error(f"Send failed: {result['message']}")
+        sys.exit(1)
+
+
+@live.command("render")
+@click.argument("output", default="output.png")
+@click.option("--top", default="/project1/out1", help="TOP operator path to render.")
+@click.option("--width", type=int, default=1920, help="Output width.")
+@click.option("--height", type=int, default=1080, help="Output height.")
+@click.option("--timeout", type=float, default=30, help="Render timeout in seconds.")
+@pass_state
+def live_render(state, output, top, width, height, timeout):
+    """Render a frame from a running TouchDesigner instance via the live connection."""
+    conn = _get_conn(state)
+    output_abs = os.path.abspath(output)
+    script = TDConnection.generate_render_script(
+        output_path=output_abs, top_path=top, width=width, height=height,
+    )
+    state.fmt.info(f"Sending render command to TD at {conn.host}:{conn.port}...")
+    result = conn.send_script(script, timeout=timeout)
+    if result["success"]:
+        state.fmt.success(f"Rendered: {output_abs}", result)
+    else:
+        state.fmt.error(f"Render failed: {result['message']}")
+        sys.exit(1)
+
+
+@live.command("status")
+@pass_state
+def live_status(state):
+    """Show the live connection status."""
+    conn = _get_conn(state)
+    reachable = conn.ping()
+    info = {
+        "host": conn.host,
+        "port": conn.port,
+        "reachable": reachable,
+    }
+    if state.fmt.json_mode:
+        state.fmt.data(info)
+    else:
+        label = click.style("CONNECTED", fg="green") if reachable else click.style("OFFLINE", fg="red")
+        click.echo(f"  TD Receiver: {label} ({conn.host}:{conn.port})")
+
+
+# ---------------------------------------------------------------------------
 # status command
 # ---------------------------------------------------------------------------
 
@@ -552,12 +774,17 @@ def export_json(state, output):
 def status(state):
     """Show TouchDesigner backend status."""
     backend = get_backend()
+    conn = TDConnection()
     available = backend.is_available()
+    live_ok = conn.ping()
     info = {
         "touchdesigner_available": available,
         "td_path": backend.td_path,
         "batch_path": backend.batch_path,
         "version": backend.get_version() if available else None,
+        "live_connection": live_ok,
+        "live_host": conn.host,
+        "live_port": conn.port,
     }
     state.fmt.data(info)
 
