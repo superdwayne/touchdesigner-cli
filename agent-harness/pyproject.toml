@@ -6,7 +6,6 @@ build-backend = "setuptools.build_meta"
 name = "cli-anything-touchdesigner"
 version = "1.0.0"
 description = "TouchDesigner CLI for AI Agents"
-readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.9"
 dependencies = ["click>=8.0"]

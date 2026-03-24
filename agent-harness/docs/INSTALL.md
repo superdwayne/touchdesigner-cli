@@ -75,10 +75,13 @@ python -m venv .venv
 # 4. Activate it
 .venv\Scripts\Activate.ps1
 
-# 5. Install (with dev/test dependencies)
+# 5. Enable UTF-8 mode (prevents encoding errors on Windows)
+$env:PYTHONUTF8 = "1"
+
+# 6. Install (with dev/test dependencies)
 pip install -e ".[dev]"
 
-# 6. Verify
+# 7. Verify
 cli-anything-touchdesigner --version
 ```
 
@@ -89,6 +92,7 @@ git clone https://github.com/superdwayne/touchdesigner-cli.git
 cd touchdesigner-cli\agent-harness
 python -m venv .venv
 .venv\Scripts\activate.bat
+set PYTHONUTF8=1
 pip install -e ".[dev]"
 cli-anything-touchdesigner --version
 ```
@@ -106,7 +110,7 @@ git clone https://github.com/superdwayne/touchdesigner-cli.git && cd touchdesign
 
 **Windows PowerShell:**
 ```powershell
-git clone https://github.com/superdwayne/touchdesigner-cli.git; cd touchdesigner-cli\agent-harness; python -m venv .venv; .venv\Scripts\Activate.ps1; pip install -e ".[dev]"; cli-anything-touchdesigner --version
+git clone https://github.com/superdwayne/touchdesigner-cli.git; cd touchdesigner-cli\agent-harness; python -m venv .venv; .venv\Scripts\Activate.ps1; $env:PYTHONUTF8="1"; pip install -e ".[dev]"; cli-anything-touchdesigner --version
 ```
 
 ---
@@ -191,6 +195,24 @@ pip uninstall cli-anything-touchdesigner
 ---
 
 ## ❓ Troubleshooting
+
+<details>
+<summary><strong>UnicodeDecodeError on Windows during install</strong></summary>
+
+Windows uses `cp1252` encoding by default, which can't handle UTF-8 characters. Set Python's UTF-8 mode before installing:
+```powershell
+# PowerShell
+$env:PYTHONUTF8 = "1"
+pip install -e ".[dev]"
+```
+```cmd
+# CMD
+set PYTHONUTF8=1
+pip install -e ".[dev]"
+```
+To make this permanent, add `PYTHONUTF8=1` to your system environment variables.
+
+</details>
 
 <details>
 <summary><strong>"command not found: cli-anything-touchdesigner"</strong></summary>
