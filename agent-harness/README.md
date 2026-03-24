@@ -78,6 +78,8 @@ source .venv/bin/activate        # macOS / Linux
 pip install -e ".[dev]"
 ```
 
+> **Windows users:** If you hit a `UnicodeDecodeError`, run `$env:PYTHONUTF8="1"` (PowerShell) or `set PYTHONUTF8=1` (CMD) before the pip install command.
+
 > This installs the CLI as `cli-anything-touchdesigner` and the shorthand `td-cli` on your PATH (inside the venv).
 
 ### Step 4: Verify it works
